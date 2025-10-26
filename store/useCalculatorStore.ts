@@ -58,6 +58,9 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
         const lastChar = state.expression[state.expression.length - 1];
         if (['+', '-', '×', '÷', '%'].includes(lastChar)) {
           newExpression = state.expression.slice(0, -1) + operator;
+        } else if (state.expression.endsWith('mod')) {
+          // Handle multi-character operator replacement
+          newExpression = state.expression.slice(0, -3) + operator;
         } else {
           newExpression = state.expression + operator;
         }
@@ -73,7 +76,7 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   inputDecimal: () => {
     set((state) => {
       // Check if current number already has a decimal point
-      const parts = state.expression.split(/[+\-×÷%]/);
+      const parts = state.expression.split(/[+\-×÷%]|mod/);
       const currentNumber = parts[parts.length - 1];
       
       if (!currentNumber.includes('.')) {
@@ -129,10 +132,18 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   backspace: () => {
     set((state) => {
       if (state.expression.length > 0) {
-        return {
-          expression: state.expression.slice(0, -1),
-          error: null,
-        };
+        // If expression ends with 'mod', remove all 3 characters
+        if (state.expression.endsWith('mod')) {
+          return {
+            expression: state.expression.slice(0, -3),
+            error: null,
+          };
+        } else {
+          return {
+            expression: state.expression.slice(0, -1),
+            error: null,
+          };
+        }
       }
       return state;
     });

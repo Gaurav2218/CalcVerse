@@ -32,7 +32,12 @@ function isDecimalPoint(char: string): boolean {
 
 // Check if character is an operator
 function isOperator(char: string): boolean {
-  return /[+\-×÷%]/.test(char) || char === 'mod';
+  return /[+\-×÷%]/.test(char);
+}
+
+// Check if string is a multi-character operator
+function isMultiCharOperator(str: string): boolean {
+  return str === 'mod';
 }
 
 // Check if character is a parenthesis
@@ -44,23 +49,40 @@ function isParenthesis(char: string): boolean {
 function tokenize(expression: string): string[] {
   const tokens: string[] = [];
   let currentNumber = '';
+  let i = 0;
   
-  for (let i = 0; i < expression.length; i++) {
+  while (i < expression.length) {
     const char = expression[i];
     
     if (isDigit(char) || isDecimalPoint(char)) {
       currentNumber += char;
+      i++;
     } else if (isOperator(char) || isParenthesis(char)) {
       if (currentNumber) {
         tokens.push(currentNumber);
         currentNumber = '';
       }
       tokens.push(char);
+      i++;
     } else if (char === ' ') {
       // Skip spaces
       if (currentNumber) {
         tokens.push(currentNumber);
         currentNumber = '';
+      }
+      i++;
+    } else {
+      // Check for multi-character operators
+      const remaining = expression.substring(i);
+      if (remaining.startsWith('mod')) {
+        if (currentNumber) {
+          tokens.push(currentNumber);
+          currentNumber = '';
+        }
+        tokens.push('mod');
+        i += 3;
+      } else {
+        i++;
       }
     }
   }
@@ -80,7 +102,7 @@ function infixToPostfix(tokens: string[]): string[] {
   for (const token of tokens) {
     if (isDigit(token) || (token.includes('.') && !isNaN(parseFloat(token)))) {
       output.push(token);
-    } else if (isOperator(token)) {
+    } else if (isOperator(token) || isMultiCharOperator(token)) {
       while (
         operators.length > 0 &&
         operators[operators.length - 1] !== '(' &&
@@ -115,7 +137,7 @@ function evaluatePostfix(postfix: string[]): number {
   for (const token of postfix) {
     if (isDigit(token) || (token.includes('.') && !isNaN(parseFloat(token)))) {
       stack.push(parseFloat(token));
-    } else if (isOperator(token)) {
+    } else if (isOperator(token) || isMultiCharOperator(token)) {
       if (stack.length < 2) {
         throw new Error('Invalid expression');
       }
@@ -152,8 +174,8 @@ function evaluatePostfix(postfix: string[]): number {
           break;
         case '%':
           // Calculator-style percentage: context-aware calculation
-          // For now, implement as simple percentage conversion
-          // TODO: Add context-aware logic for multiplication, addition, subtraction
+          // This is a simplified version - in a real calculator, percentage
+          // behavior depends on the previous operation context
           result = b / 100;
           break;
         default:
@@ -259,6 +281,11 @@ export function canExtendExpression(expression: string, newChar: string): boolea
   }
   
   if (isOperator(lastChar)) {
+    return isDigit(newChar) || newChar === '(' || newChar === '-';
+  }
+  
+  // Handle multi-character operators
+  if (expression.endsWith('mod')) {
     return isDigit(newChar) || newChar === '(' || newChar === '-';
   }
   
